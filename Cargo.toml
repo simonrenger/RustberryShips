@@ -1,0 +1,6 @@
+[package]
+name = "RustberryShips"
+version = "0.1.0"
+authors = ["FireFlyForLife <maiko.s.99@gmail.com>", "Simon Renger <info@simonrenger.de>"]
+
+[dependencies]
