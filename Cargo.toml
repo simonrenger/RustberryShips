@@ -5,6 +5,7 @@ authors = ["FireFlyForLife <maiko.s.99@gmail.com>", "Simon Renger <info@simonren
 build = "build.rs"
 
 [dependencies]
+cgmath = "0.16.1"
 
 [dependencies.glfw]
 git = "https://github.com/bjz/glfw-rs.git"
