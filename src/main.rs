@@ -135,7 +135,7 @@ fn main() {
         let perspective_mat = cgmath::perspective(Rad::from(Deg(camera_component.fovy)), camera_component.aspect, camera_component.near, camera_component.far);
         let view_mat = camera_transform.calculate_model_matrix().invert().expect("Cannot invert view matrix!");
         let model_mat = Matrix4::from_value(1.0);
-        let MVP = perspective_mat * view_mat * model_mat;
+        let mvp = perspective_mat * view_mat * model_mat;
 
         unsafe {
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
@@ -160,7 +160,7 @@ fn main() {
             
 
             let mvp_location = gl::GetUniformLocation(shader_program.handle(), CString::new("u_MVP").unwrap().as_ptr());
-            gl::UniformMatrix4fv(mvp_location, 1, gl::FALSE, &MVP[0][0]);
+            gl::UniformMatrix4fv(mvp_location, 1, gl::FALSE, &mvp[0][0]);
 
             // Draw a triangle from the 3 vertices
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
@@ -185,6 +185,9 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
             window.set_should_close(true)
+        }
+        glfw::WindowEvent::Key(Key::A, _, Action::Press, _) => {
+            println!("Pressed the a key!" )
         }
         _ => {}
     }
