@@ -10,6 +10,7 @@ mod gl {
 mod rendering;
 mod window;
 mod engine_content;
+mod entity_manager;
 
 use gl::types::*;
 use std::mem;
@@ -48,6 +49,18 @@ static VERTEX_DATA: [GLfloat; 9] = [
 // }";
 
 fn main() {
+    //ectest
+
+    let mut em = entity_manager::EntityManager::new();
+    let entity_id = em.create_entity();
+    em.add_tag(entity_id, (*"test").to_string());
+    em.add_component(entity_id,entity_manager::Transform::new());
+
+    let test = em.get_by_tag((*"test").to_string());
+
+    let tf = em.get_cmp::<entity_manager::Transform>(test).unwrap();
+
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
     let mut mywindow = Window::new(glfw, &String::from("My own window struct!"));
