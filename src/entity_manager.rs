@@ -7,6 +7,8 @@ use std::hash::{Hash, Hasher};
 use std::any::TypeId;
 use std::any::Any;
 use std::vec;
+use std::ops::DerefMut;
+
 /**
  *  Orginal source code:
  * 
@@ -66,7 +68,22 @@ impl EntityManager{
     }
 }    **/
 
-pub trait Component : Any{
+pub trait AnyCastable : Any{
+    fn as_any<'a>(&'a self) -> &'a Any;
+    fn as_any_mut<'a>(&'a mut self) -> &'a mut Any;
+}
+
+impl<T: Any> AnyCastable for T{
+    fn as_any<'a>(&'a self) -> &'a Any{
+        self
+    }
+
+    fn as_any_mut<'a>(&'a mut self) -> &'a mut Any{
+        self
+    }
+}
+
+pub trait Component : AnyCastable{
     fn start(&mut self);
     fn tick(&mut self, delta_time: f32);
     fn handle_input(&mut self, event: glfw::WindowEvent){}
@@ -93,67 +110,64 @@ impl Component for Transform{
     fn tick(&mut self, delta_time: f32){}
 }
 
+type EntityId = u32;
 
 pub struct EntityManager{
-    entities : HashMap<u64,HashMap<u64,Box<Any>>>,
-    tags: HashMap<String,u64>,
-    ids : u64
+    entities : HashMap<EntityId,HashMap<u64,Box<Component>>>,
+    tags: HashMap<String,EntityId>,
+    ids : u64,
+    id_counter: EntityId,
+
+    just_added_entities: Vec<EntityId>,
 }
 
+fn get_default_hash<T:'static>(t: &T)->u64{
+    let mut hasher = DefaultHasher::new();
+    TypeId::of::<T>().hash(&mut hasher);
+    hasher.finish()
+}
 
 impl EntityManager{
     pub fn new() ->EntityManager{
         EntityManager{
            entities: HashMap::new(),
            tags: HashMap::new(),
-           ids: 0
+           ids: 0,
+           id_counter: 0,
+           just_added_entities: Vec::new()
         }
     }
     /**
      * create an entity and adds it to the list
      **/ 
-    pub fn create_entity(&mut self) ->u64{
-            let mut hasher = DefaultHasher::new();
-            self.ids.hash(&mut hasher);
-            self.ids += 1;
-            let entity_id = hasher.finish();
-            if !self.entities.contains_key(&entity_id){
-                    self.entities.insert(entity_id, HashMap::new());
-                }
-            entity_id
+    pub fn create_entity(&mut self) ->EntityId{
+        let entity_id = self.generate_entity_id();
+        if !self.entities.contains_key(&entity_id){
+            self.entities.insert(entity_id, HashMap::new());
+        }
+        entity_id
     }
 
-    pub fn add_tag(&mut self,entity_id : u64, name:String){
-            self.tags.insert(name,entity_id);
+    pub fn add_tag(&mut self,entity_id : EntityId, name:String){
+        self.tags.insert(name,entity_id);
     }
 
-    fn get_hash<T:'static>(&mut self,t:&T)->u64{
-        let mut hasher = DefaultHasher::new();
-        TypeId::of::<T>().hash(&mut hasher);
-        hasher.finish()
-    }
-     pub fn add_component<T: 'static + Component>(&mut self, entity_id: u64, t: T)
-     {        
-        let cmp_id = self.get_hash(&t);
+    pub fn add_component<T: 'static + Component>(&mut self, entity_id: EntityId, t: T)
+    {
+        let cmp_id = get_default_hash(&t);
         let cmp_map = self.entities.get_mut(&entity_id).expect("Cannot find component list for entity, it should have been added?");
         cmp_map.insert(cmp_id, Box::new(t));
-     }
-     pub fn get_by_tag(&mut self,tag:String)->Result<&mut HashMap<u64,Box<Any>>,bool>{
-         if self.tags.contains_key(&tag) {
-             Ok(self.entities.get_mut(&self.tags[&tag]).unwrap())
-         }else{
+    }
+    pub fn get_by_tag(&mut self, tag:String)->Result<&mut HashMap<u64,Box<Component>>,bool>{
+        if self.tags.contains_key(&tag) {
+            Ok(self.entities.get_mut(&self.tags[&tag]).unwrap())
+        }else{
             Err(false)
-         }
-     }
-     pub fn get_by_id(&mut self,id : u64)->Result<&mut HashMap<u64,Box<Any>>,bool>{
-         if self.entities.contains_key(&id) {
-             Ok(self.entities.get_mut(&id).unwrap())
-         }else{
-            Err(false)
-         }
-     }
+        }
+    }
 
-    pub fn get_cmp<'a,T:'static + Component>(&mut self,cmps :Result<&'a mut HashMap<u64,Box<Any>>,bool>)->Result<&'a mut T,&str>{
+
+    pub fn get_cmp<'a,T:'static + Component>(&'a self, cmps: Result<&'a mut HashMap<u64,Box<Component>>,bool>) -> Result<&'a mut T,&str>{
         match cmps{
             Ok(list)=>{
                 let mut hasher = DefaultHasher::new();
@@ -161,7 +175,9 @@ impl EntityManager{
                 let cmp_id = hasher.finish();
                 if list.contains_key(&cmp_id) {
                         let result = list.get_mut(&cmp_id).unwrap();
-                        Ok(result.downcast_mut::<T>().unwrap())
+                        let cmp: &'a mut T = result.as_any_mut().downcast_mut().unwrap();
+                        Ok(cmp)
+                        //Ok(result.downcast::<T>().unwrap())
                 }else{
                     Err("Fuck 2.0")
                 }
@@ -174,8 +190,26 @@ impl EntityManager{
     pub fn update(&mut self, delta_time: f32){
         for entity in self.entities.values_mut(){
             for component in entity.values_mut(){
-                component.downcast_mut::<Component>().tick(delta_time);
+                component.tick(delta_time);
             }
         }
+    }
+
+    //===================
+    // Private methods:
+    //===================
+    /// Return all the components of an entity with 'id'
+    fn get_component_by_id(&mut self, id: EntityId)->Result<&mut HashMap<u64, Box<Component>>,bool>{
+        if self.entities.contains_key(&id) {
+            Ok(self.entities.get_mut(&id).unwrap())
+        }else{
+            Err(false)
+        }
+    }
+
+    fn generate_entity_id(&mut self) -> EntityId{
+        self.id_counter += 1;
+        
+        self.id_counter
     }
 }
