@@ -1,4 +1,5 @@
-pub mod debug_draw; 
+pub mod debug_draw;
+pub mod opengl_renderer;
 
 use super::gl;
 use super::gl::types::*;
@@ -46,7 +47,15 @@ use std::io::prelude::*;
 // 	}
 // }
 
+pub struct FillInstructions{
+    pub stride: u32,
+    pub vertex_amount: u32,
+}
 
+pub trait VertexProvider{
+    fn contains_attribute(&self, name: &str) -> bool;
+    fn provide(&self, buffer: Vec<f32>, instructions: &FillInstructions);
+}
 
 pub struct ShaderProgram{
     id: GLuint,
@@ -118,41 +127,57 @@ impl ShaderProgram {
                     .ok()
                     .expect("ShaderInfoLog not valid utf8")
             );
+            }
+        }
+        shader
+    }
+
+    fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
+        unsafe {
+            let program = gl::CreateProgram();
+            gl::AttachShader(program, vs);
+            gl::AttachShader(program, fs);
+            gl::LinkProgram(program);
+            // Get the link status
+            let mut status = gl::FALSE as GLint;
+            gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
+
+            // Fail on error
+            if status != (gl::TRUE as GLint) {
+                let mut len: GLint = 0;
+                gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
+                let mut buf = Vec::with_capacity(len as usize);
+                buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
+                gl::GetProgramInfoLog(
+                    program,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                );
+                panic!(
+                    "{}",
+                    str::from_utf8(&buf)
+                        .ok()
+                        .expect("ProgramInfoLog not valid utf8")
+                );
+            }
+            program
         }
     }
-    shader
 }
 
-fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
-    unsafe {
-        let program = gl::CreateProgram();
-        gl::AttachShader(program, vs);
-        gl::AttachShader(program, fs);
-        gl::LinkProgram(program);
-        // Get the link status
-        let mut status = gl::FALSE as GLint;
-        gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len: GLint = 0;
-            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetProgramInfoLog(
-                program,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf)
-                    .ok()
-                    .expect("ProgramInfoLog not valid utf8")
-            );
+impl Clone for ShaderProgram{
+    fn clone(&self) -> ShaderProgram{
+        ShaderProgram{
+            id: self.id,
         }
-        program
     }
 }
+
+impl PartialEq for ShaderProgram{
+    fn eq(&self, other: &ShaderProgram) -> bool{
+        self.id == other.id
+    }
 }
+
+impl Eq for ShaderProgram {}

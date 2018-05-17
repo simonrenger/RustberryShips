@@ -87,6 +87,11 @@ impl DebugDraw{
             gl::DrawArrays(gl::LINES, 0, (self.lines.len() * 2) as i32);
         }
     }
+
+    pub fn clear(&mut self){
+        self.points.clear();
+        self.lines.clear();
+    }
 }
 
 impl Drop for DebugDraw{

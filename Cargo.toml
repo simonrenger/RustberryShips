@@ -6,6 +6,7 @@ build = "build.rs"
 
 [dependencies]
 cgmath = "0.16.1"
+recs = "2.0.1"
 
 [dependencies.glfw]
 git = "https://github.com/bjz/glfw-rs.git"
