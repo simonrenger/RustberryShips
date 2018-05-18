@@ -2,6 +2,9 @@
 extern crate recs;
 extern crate glfw;
 extern crate cgmath;
+extern crate rustberry_ecs;
+#[macro_use]
+extern crate rustberry_ecs_derive;
 
 use glfw::{Action, Context, Key};
 

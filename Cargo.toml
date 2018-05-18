@@ -7,10 +7,11 @@ build = "build.rs"
 [dependencies]
 cgmath = "0.16.1"
 recs = "2.0.1"
+rustberry_ecs = {path = "./lib/rustberry-ecs"}
+rustberry_ecs_derive = {path = "./lib/rustberry-ecs/rustberry-ecs-derive"}
 
 [dependencies.glfw]
 git = "https://github.com/bjz/glfw-rs.git"
 
 [build-dependencies]
 gl_generator = "0.5.0"
-

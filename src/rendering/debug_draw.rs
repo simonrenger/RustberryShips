@@ -1,4 +1,5 @@
 use ::gl;
+use ::recs::{Ecs, EntityId};
 //use ::gl::types::{GLint, GLuint};
 use ::cgmath::{Vector3, Vector4, Matrix4};
 use ::rendering::ShaderProgram;
@@ -6,6 +7,9 @@ use std::ffi::CString;
 use std::mem;
 use std::ptr;
 use std::os::raw::c_void;
+use std::any::Any;
+use ::*;
+use ::rustberry_ecs::EcsRetrievable;
 
 use std::vec;
 
@@ -15,6 +19,7 @@ struct PointLocation{
     color: Vector4<f32>,
 }
 
+#[derive(EcsRetrievable)]
 pub struct DebugDraw{
     points: Vec<PointLocation>,
     lines: Vec<(PointLocation, PointLocation)>,

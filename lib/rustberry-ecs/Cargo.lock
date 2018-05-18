@@ -1,0 +1,14 @@
+[[package]]
+name = "recs"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rustberry-ecs"
+version = "0.1.0"
+dependencies = [
+ "recs 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[metadata]
+"checksum recs 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ae7fb921f1f7df72e9ee32716cc1c5104959077babe807005efee511e4f360da"

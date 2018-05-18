@@ -1,0 +1,7 @@
+[package]
+name = "rustberry_ecs"
+version = "0.1.0"
+authors = ["FireFlyForLife <maiko.s.99@gmail.com>"]
+
+[dependencies]
+recs = "2.0.1"
