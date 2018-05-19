@@ -4,7 +4,7 @@ use std::boxed::Box;
 use ::glfw;
 
 pub trait System{
-    fn init(&mut self);
+    fn init(&mut self, ecs: &mut Ecs);
     fn update(&mut self, ecs: &mut Ecs, delta_time: f64);
     fn handle_event(&mut self, _event: &glfw::WindowEvent){}
 }
@@ -23,14 +23,14 @@ impl SystemManager{
     }
 
     ///Currently doens't do anything but maybe later :)
-    pub fn init(&mut self){
+    pub fn init(&mut self, ecs: &mut Ecs){
         
     }
 
     pub fn update(&mut self, ecs: &mut Ecs, delta_time: f64){
         for i in 0..self.just_added_systems.len(){
             let system_index = self.just_added_systems[i];
-            self.systems[system_index].init();            
+            self.systems[system_index].init(ecs);            
         }
         self.just_added_systems.clear();
 

@@ -7,6 +7,7 @@ use window::Window;
 use ::cgmath::{Matrix4, Matrix3, Vector3, Vector2, Quaternion, Basis3, Euler};
 use ::glfw::Key;
 use input_system::InputSystem;
+use rustberry_ecs::EcsRetrievable;
 
 //============================
 //Components:
@@ -18,7 +19,7 @@ pub struct TransformCmp{
     pub scale: Vector3<f32>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, EcsRetrievable)]
 pub struct CameraCmp{
     pub fovy: f32,
     pub aspect: f32,
@@ -48,6 +49,7 @@ pub struct MeshCmp{
 }
 
 ///Holds data for screen/window information in this singleton
+//#[derive(EcsRetrievable)]
 pub struct ScreenDataCmp{
     pub mywindow: Window,
 }
@@ -76,12 +78,20 @@ impl ScreenDataCmp {
     }
 }
 
+#[derive(Clone, PartialEq, Debug, EcsRetrievable)]
+pub struct TimeCmp{
+    pub current_time: f64,
+    pub delta_time: f64,
+}
+
 //============================
 //Systems:
 //============================
 pub struct FreelookCameraSystem{
     pub movement_speed: f32,
     pub rotation_speed: f32,
+
+    pub active: bool,
 }
 
 impl FreelookCameraSystem { 
@@ -89,10 +99,12 @@ impl FreelookCameraSystem {
 }
 
 impl System for FreelookCameraSystem{
-    fn init(&mut self){
+    fn init(&mut self, ecs: &mut Ecs){
         println!("FreelookCameraSystem is initialized!");
     }
     fn update(&mut self, ecs: &mut Ecs, delta_time: f64){
+        if !self.active{ return (); }
+
         //Get the input ready:
 
         let mut camera_ids: Vec<EntityId> = Vec::new();

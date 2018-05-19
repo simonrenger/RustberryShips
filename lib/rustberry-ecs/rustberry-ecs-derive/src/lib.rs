@@ -49,6 +49,16 @@ fn impl_ecs_retrievable(ast: &syn::DeriveInput) -> quote::Tokens {
                 let cmp: &mut Self::T = ecs.borrow_mut(ids[0]).expect("We querried with ecs.collect_with but it is not there?");
                 Some(cmp)
             }
+
+            fn retrieve_entity(ecs: &Ecs) -> Option<EntityId>{
+                let mut ids: Vec<EntityId> = Vec::new();
+                let filter = component_filter!(#name);
+                ecs.collect_with(&filter, &mut ids);
+                if ids.is_empty() {
+                    return None{};
+                }
+                Some(ids[0])
+            }
         }
     }
 }

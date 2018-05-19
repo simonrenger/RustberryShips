@@ -35,9 +35,10 @@ use rustberry_ecs::EcsRetrievable;
 use cgmath::prelude::*;
 use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg, Quaternion};
 
-use engine_content::{TransformCmp, CameraCmp, MeshCmp, ScreenDataCmp};
-use game_content::systems::{TilemapSystem};
+use engine_content::{TransformCmp, CameraCmp, MeshCmp, ScreenDataCmp, TimeCmp};
+use game_content::systems::{TilemapSystem, TopDownCameraSystem};
 use game_content::components::{TilemapCmp, TilePosCmp};
+use std::env;
 
 use window::Window;
 
@@ -89,6 +90,9 @@ fn main() {
         Vector3{x: -1.0, y:  1.0, z:  1.0},
         Vector3{x: 1.0,  y: -1.0, z:  1.0}
     ];
+
+    let args: Vec<String> = env::args().collect();
+    let do_count_fps = args.contains(&String::from("print_fps"));
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
@@ -164,7 +168,7 @@ fn main() {
     // Add entities to the ECS
     let camera_entity: EntityId = ecs.create_entity();
     let _ = ecs.set(camera_entity, TransformCmp{
-        position: Vector3{x: 0.0, y: 0.0, z: 2.0}, 
+        position: Vector3{x: 30.0, y: 15.0, z: 30.0}, 
         orientation: Quaternion::one(),
         scale: Vector3{x: 1.0, y: 1.0, z: 1.0},
     });
@@ -195,11 +199,13 @@ fn main() {
         mywindow: mywindow,
     });
     let _ = ecs.set(dump_entity, debug_renderer);
+    let _ = ecs.set(dump_entity, TimeCmp{current_time: 0.0, delta_time: 0.0});
     
-    systems.add(Box::new(engine_content::FreelookCameraSystem{movement_speed: 10.5, rotation_speed: 70.5}));
+    systems.add(Box::new(TopDownCameraSystem::new(-45.0)));
+    systems.add(Box::new(engine_content::FreelookCameraSystem{movement_speed: 10.5, rotation_speed: 70.5, active: false}));
     systems.add(Box::new(TilemapSystem{}));
 
-    systems.init();
+    systems.init(&mut ecs);
 
     let mut last_time = glfw.get_time();
     let mut should_close: bool = false;
@@ -225,7 +231,18 @@ fn main() {
         let current_time = glfw.get_time();
         let dt = current_time - last_time;
         last_time = current_time;
+        if let Some(time_entity) = TimeCmp::retrieve_entity(&ecs){
+            let mut time_cmp: TimeCmp = ecs.get(time_entity).unwrap();
+            time_cmp.current_time = current_time;
+            time_cmp.delta_time = dt;
+            let _ = ecs.set(time_entity, time_cmp);
+        }
+        if do_count_fps {
+            println!("FPS: {}", 1.0/dt);
+        }
+
         systems.update(&mut ecs, dt);
+
 
 
         //Add some lines:
