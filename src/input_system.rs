@@ -4,6 +4,7 @@ use ::glfw;
 use engine_content::ScreenDataCmp;
 use ::*;
 
+#[allow(dead_code)]
 pub struct InputSystem<'a> {
     pub window: &'a Window,
 }

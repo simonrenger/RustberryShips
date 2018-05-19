@@ -30,12 +30,14 @@ use std::ffi::CString;
 use rendering::debug_draw::DebugDraw;
 use rendering::opengl_renderer::*;
 use system_manager::SystemManager;
+use rustberry_ecs::EcsRetrievable;
 
 use cgmath::prelude::*;
 use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg, Quaternion};
 
 use engine_content::{TransformCmp, CameraCmp, MeshCmp, ScreenDataCmp};
 use game_content::systems::{TilemapSystem};
+use game_content::components::{TilemapCmp, TilePosCmp};
 
 use window::Window;
 
@@ -154,7 +156,10 @@ fn main() {
             0,
             ptr::null(),
         );
-    }    
+
+        gl::Enable(gl::DEPTH_TEST);
+        gl::DepthFunc(gl::LESS);
+    }
 
     // Add entities to the ECS
     let camera_entity: EntityId = ecs.create_entity();
@@ -182,10 +187,14 @@ fn main() {
         shader: shader_program.clone(),
     });
 
+    let tilemap_entity: EntityId = ecs.create_entity();
+    let _ = ecs.set(tilemap_entity, TilemapCmp{width: 6, height: 6});
+
     let dump_entity: EntityId = ecs.create_entity();
     let _ = ecs.set(dump_entity, ScreenDataCmp{
         mywindow: mywindow,
     });
+    let _ = ecs.set(dump_entity, debug_renderer);
     
     systems.add(Box::new(engine_content::FreelookCameraSystem{movement_speed: 10.5, rotation_speed: 70.5}));
     systems.add(Box::new(TilemapSystem{}));
@@ -220,10 +229,10 @@ fn main() {
 
 
         //Add some lines:
-        let green_color = Vector4{x: 0.0, y: 1.0, z: 0.0, w: 0.0};
-        debug_renderer.add_line(Vector3{x: 4.0, y: 1.0, z: 0.0}, Vector3{x: -4.0, y: -1.0, z: 0.0}, green_color.clone());
-        debug_renderer.add_line(Vector3{x: -4.0, y: -1.0, z: 0.0}, Vector3{x: 2.0, y: 0.8, z: 0.0}, green_color.clone());
-        debug_renderer.add_line(Vector3{x: 0.4, y: 0.8, z: 0.0}, Vector3{x: 4.0, y: 1.0, z: 0.0}, green_color.clone());
+        // let green_color = Vector4{x: 0.0, y: 1.0, z: 0.0, w: 0.0};
+        // debug_renderer.add_line(Vector3{x: 4.0, y: 1.0, z: 0.0}, Vector3{x: -4.0, y: -1.0, z: 0.0}, green_color.clone());
+        // debug_renderer.add_line(Vector3{x: -4.0, y: -1.0, z: 0.0}, Vector3{x: 2.0, y: 0.8, z: 0.0}, green_color.clone());
+        // debug_renderer.add_line(Vector3{x: 0.4, y: 0.8, z: 0.0}, Vector3{x: 4.0, y: 1.0, z: 0.0}, green_color.clone());
 
         let camera_transform: TransformCmp = ecs.get(camera_entity).unwrap();
         let camera_component: CameraCmp = ecs.get(camera_entity).unwrap();
@@ -234,7 +243,7 @@ fn main() {
 
         unsafe {
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
@@ -262,8 +271,11 @@ fn main() {
         }
         let vp = perspective_mat * view_mat;
         renderer.render(&camera_transform, &camera_component, &mut ecs);
-        debug_renderer.render(&vp);
-        debug_renderer.clear();
+        {
+            let db_renderer = DebugDraw::retrieve_mut(&mut ecs).unwrap();
+            db_renderer.render(&vp);
+            db_renderer.clear();
+        }
 
         ScreenDataCmp::retrieve_mut(&mut ecs).unwrap().mywindow.handle.swap_buffers();
     }

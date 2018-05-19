@@ -1,6 +1,6 @@
 use std::vec::Vec;
 use rendering::ShaderProgram;
-use ::system_manager::{System, SystemManager};
+use ::system_manager::{System};
 use ::*;
 use cgmath::prelude::*;
 use window::Window;

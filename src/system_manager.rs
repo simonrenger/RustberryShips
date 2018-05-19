@@ -1,4 +1,4 @@
-use ::recs::{Ecs, EntityId};
+use ::recs::{Ecs};
 use std::vec::Vec;
 use std::boxed::Box;
 use ::glfw;
@@ -6,7 +6,7 @@ use ::glfw;
 pub trait System{
     fn init(&mut self);
     fn update(&mut self, ecs: &mut Ecs, delta_time: f64);
-    fn handle_event(&mut self, event: &glfw::WindowEvent){}
+    fn handle_event(&mut self, _event: &glfw::WindowEvent){}
 }
 
 pub struct SystemManager{

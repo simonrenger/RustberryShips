@@ -7,7 +7,7 @@ use std::str;
 use std::ffi::CString;
 use std::ptr;
 
-use std::env;
+//use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 

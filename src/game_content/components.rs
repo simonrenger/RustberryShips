@@ -1,5 +1,3 @@
-use ::cgmath::{};
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct TankCmp{
     pub is_dead: bool,
