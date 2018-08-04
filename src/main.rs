@@ -1,10 +1,12 @@
 #[macro_use]
 extern crate recs;
+extern crate num;
 extern crate glfw;
 extern crate cgmath;
 extern crate rustberry_ecs;
 #[macro_use]
 extern crate rustberry_ecs_derive;
+extern crate tobj;
 
 use glfw::{Action, Context, Key};
 
@@ -18,6 +20,9 @@ mod rendering;
 mod window;
 mod entity_manager;
 mod system_manager;
+mod resource_manager;
+mod engine_resources;
+mod model_loader;
 mod input_system;
 pub mod engine_content;
 mod game_content;
@@ -27,17 +32,22 @@ use std::boxed::Box;
 use std::mem;
 use std::ptr;
 use std::ffi::CString;
+use std::cell::RefCell;
+use std::path::Path;
 use rendering::debug_draw::DebugDraw;
 use rendering::opengl_renderer::*;
 use system_manager::SystemManager;
 use rustberry_ecs::EcsRetrievable;
+use model_loader::load_model_from;
+use engine_resources::MeshResource;
 
 use cgmath::prelude::*;
 use cgmath::{Matrix4, Vector4, Vector3, Rad, Deg, Quaternion};
 
+use resource_manager::ResourceManager;
 use engine_content::{TransformCmp, CameraCmp, MeshCmp, ScreenDataCmp, TimeCmp};
-use game_content::systems::{TilemapSystem, TopDownCameraSystem};
-use game_content::components::{TilemapCmp, TilePosCmp};
+use game_content::systems::{TilemapSystem, TopDownCameraSystem, BoardManagerSystem};
+use game_content::components::{TilemapCmp, TilePosCmp, BoardManagerCmp};
 use std::env;
 
 use window::Window;
@@ -110,6 +120,8 @@ fn main() {
 
     let mut renderer = OpenglRenderer::new();
     let mut debug_renderer = DebugDraw::new();
+    let mut resource_manager = RefCell::new(ResourceManager::new());
+    load_resources(&mut resource_manager.borrow_mut());
 
     // Create GLSL shaders
     let shader_program = rendering::ShaderProgram::from_files("./resources/shaders/basic_2d.vertexshader", "./resources/shaders/basic_2d.fragshader");
@@ -117,8 +129,7 @@ fn main() {
     let mut vao = 0;
     let mut vbo = 0;
     let mut box_vbo = 0;
-
-    //let filter = component_filter!(TransformCmp, MeshCmp);
+    let mut mesh_vbo = 0;
 
     unsafe {
         // Create Vertex Array Object
@@ -142,6 +153,17 @@ fn main() {
             gl::ARRAY_BUFFER,
             (box_vertices.len() * mem::size_of::<Vector3<f32>>()) as GLsizeiptr,
             mem::transmute(&box_vertices[0]),
+            gl::STATIC_DRAW,
+        );
+
+        // Create a buffer for the mesh
+        let mesh_vertices = resource_manager.borrow().get::<MeshResource>("TankModel").expect("TankModel is not here!").calculate_vertices();
+        gl::GenBuffers(1, &mut mesh_vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, mesh_vbo);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            (mesh_vertices.len() * mem::size_of::<Vector3<f32>>()) as GLsizeiptr,
+            mem::transmute(&mesh_vertices[0]),
             gl::STATIC_DRAW,
         );
 
@@ -176,7 +198,7 @@ fn main() {
         fovy: 90.0,
         aspect: mywindow.aspect_ratio(),
         near: 0.1,
-        far: 100.0,
+        far: 1000.0,
     });
     
     let box_entity: EntityId = ecs.create_entity();
@@ -191,9 +213,23 @@ fn main() {
         shader: shader_program.clone(),
     });
 
-    let tilemap_entity: EntityId = ecs.create_entity();
-    let _ = ecs.set(tilemap_entity, TilemapCmp{width: 6, height: 6});
+    let mesh_entity: EntityId = ecs.create_entity();
+    let _ = ecs.set(mesh_entity, TransformCmp{
+        position: Vector3{x: 12.0, y: 1.0, z: 0.0}, 
+        orientation: Quaternion::one(),
+        scale: Vector3{x: 1.0, y: 1.0, z: 1.0},
+    });
+    let _ = ecs.set(mesh_entity, MeshCmp{
+        vertices: resource_manager.borrow().get::<MeshResource>("TankModel").expect("TankModel is not here!").calculate_vertices(),
+        vbo: mesh_vbo,
+        shader: shader_program.clone(),
+    });
 
+    let tilemap_entity: EntityId = ecs.create_entity();
+    let _ = ecs.set(tilemap_entity, TilemapCmp{width: 6, height: 6, tile_size: 10.0});
+    let _ = ecs.set(tilemap_entity, BoardManagerCmp::new());
+
+    //An entity to dump misc singleton components onto
     let dump_entity: EntityId = ecs.create_entity();
     let _ = ecs.set(dump_entity, ScreenDataCmp{
         mywindow: mywindow,
@@ -204,6 +240,7 @@ fn main() {
     systems.add(Box::new(TopDownCameraSystem::new(-45.0)));
     systems.add(Box::new(engine_content::FreelookCameraSystem{movement_speed: 10.5, rotation_speed: 70.5, active: false}));
     systems.add(Box::new(TilemapSystem{}));
+    systems.add(Box::new(BoardManagerSystem::new()));
 
     systems.init(&mut ecs);
 
@@ -238,7 +275,7 @@ fn main() {
             let _ = ecs.set(time_entity, time_cmp);
         }
         if do_count_fps {
-            println!("FPS: {}", 1.0/dt);
+            println!("FPS: {:.6} | Frame time: {:.6} ms", 1.0/dt, dt);
         }
 
         systems.update(&mut ecs, dt);
@@ -278,7 +315,7 @@ fn main() {
                 0,
                 ptr::null(),
             );
-            
+
 
             let mvp_location = gl::GetUniformLocation(shader_program.handle(), CString::new("u_MVP").unwrap().as_ptr());
             gl::UniformMatrix4fv(mvp_location, 1, gl::FALSE, &mvp[0][0]);
@@ -328,4 +365,9 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
         // }
         _ => {}
     }
+}
+
+fn load_resources(resource_manager: &mut ResourceManager) {
+    resource_manager.add::<MeshResource>("TankModel", load_model_from(&Path::new("./resources/models/Low_poly_rusty_tank.obj")));
+    resource_manager.get_mut::<MeshResource>("TankModel").unwrap().scale = 0.01;
 }

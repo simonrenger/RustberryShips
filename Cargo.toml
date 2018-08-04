@@ -5,8 +5,10 @@ authors = ["FireFlyForLife <maiko.s.99@gmail.com>", "Simon Renger <info@simonren
 build = "build.rs"
 
 [dependencies]
+num = "0.1.36"
 cgmath = "0.16.1"
 recs = "2.0.1"
+tobj = "0.1.6"
 rustberry_ecs = {path = "./lib/rustberry-ecs"}
 rustberry_ecs_derive = {path = "./lib/rustberry-ecs/rustberry-ecs-derive"}
 

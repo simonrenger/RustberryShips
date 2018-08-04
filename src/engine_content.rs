@@ -8,6 +8,7 @@ use ::cgmath::{Matrix4, Matrix3, Vector3, Vector2, Quaternion, Basis3, Euler};
 use ::glfw::Key;
 use input_system::InputSystem;
 use rustberry_ecs::EcsRetrievable;
+use engine_resources::MeshResource;
 
 //============================
 //Components:
@@ -46,6 +47,16 @@ pub struct MeshCmp{
     pub vertices: Vec<Vector3<f32>>,
     pub vbo: u32,
     pub shader: ShaderProgram,
+}
+
+impl MeshCmp{
+    pub fn new(mesh_resource: &MeshResource, shader_program: ShaderProgram) -> MeshCmp{
+        MeshCmp{
+            vertices: mesh_resource.calculate_vertices(),
+            vbo: 0,
+            shader: shader_program,
+        }
+    }
 }
 
 ///Holds data for screen/window information in this singleton
